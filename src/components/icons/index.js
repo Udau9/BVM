@@ -1,3 +1,4 @@
+// src/components/icons/index.js
 export { default as IconAppStore } from './appstore';
 export { default as IconBookmark } from './bookmark';
 export { default as IconCodepen } from './codepen';
