@@ -46,19 +46,24 @@ const StyledPostContent = styled.div`
   }
 `;
 
-const PostTemplate = ({ data, location }) => {
+
+         const PostTemplate = ({ data, location }) => {
   const { markdownRemark: post } = data;
+  
+  // Enhanced error handling
   if (!post?.frontmatter) {
     return (
       <Layout location={location}>
-        <h1>Post not found</h1>
-        <Link to="/pensieve">Back to posts</Link>
+        <StyledPostContainer>
+          <h1>Post not found</h1>
+          <Link to="/pensieve">Back to all posts</Link>
+        </StyledPostContainer>
       </Layout>
     );
   }
 
   const { frontmatter, html } = post;
-  const { title, date, tags } = frontmatter;
+  const { title, date, tags = [] } = frontmatter; // Default empty array for tags
 
   return (
     <Layout location={location}>
@@ -79,11 +84,15 @@ const PostTemplate = ({ data, location }) => {
                 day: 'numeric',
               })}
             </time>
-            {tags && tags.length > 0 && (
+            {tags.length > 0 && (
               <>
                 <span>&nbsp;&mdash;&nbsp;</span>
                 {tags.map((tag, i) => (
-                  <Link key={i} to={`/pensieve/tags/${kebabCase(tag)}/`} className="tag">
+                  <Link 
+                    key={i} 
+                    to={`/pensieve/tags/${kebabCase(tag)}/`} 
+                    className="tag"
+                  >
                     #{tag}
                   </Link>
                 ))}
@@ -92,7 +101,9 @@ const PostTemplate = ({ data, location }) => {
           </p>
         </StyledPostHeader>
 
-        <StyledPostContent dangerouslySetInnerHTML={{ __html: html }} />
+        {html && (
+          <StyledPostContent dangerouslySetInnerHTML={{ __html: html }} />
+        )}
       </StyledPostContainer>
     </Layout>
   );
@@ -103,25 +114,23 @@ PostTemplate.propTypes = {
     markdownRemark: PropTypes.shape({
       html: PropTypes.string,
       frontmatter: PropTypes.shape({
-        title: PropTypes.string,
-        date: PropTypes.string,
+        title: PropTypes.string.isRequired,
+        date: PropTypes.string.isRequired,
         tags: PropTypes.arrayOf(PropTypes.string),
-      }),
+      }).isRequired,
     }),
-  }),
-  location: PropTypes.object,
+  }).isRequired,
+  location: PropTypes.object.isRequired,
 };
 
 export const pageQuery = graphql`
-  query($slug: String!) {
-    markdownRemark(frontmatter: { slug: { eq: $slug } }) {
+  query BlogPostBySlug($slug: String!) {
+    markdownRemark(fields: { slug: { eq: $slug } }) {
       html
       frontmatter {
         title
-        description
         date
         tags
-        # Remove slug from here since we're using it in the filter
       }
     }
   }
