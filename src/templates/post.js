@@ -113,13 +113,15 @@ PostTemplate.propTypes = {
 };
 
 export const pageQuery = graphql`
-  query BlogPostBySlug($slug: String!) {
-    markdownRemark(fields: { slug: { eq: $slug } }) {
+  query($slug: String!) {
+    markdownRemark(frontmatter: { slug: { eq: $slug } }) {
       html
       frontmatter {
         title
+        description
         date
         tags
+        # Remove slug from here since we're using it in the filter
       }
     }
   }
