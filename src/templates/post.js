@@ -17,41 +17,25 @@ const StyledPostHeader = styled.header`
 `;
 const StyledPostContent = styled.div`
   margin-bottom: 100px;
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    margin: 2em 0 1em;
-  }
-
-  p {
-    margin: 1em 0;
-    line-height: 1.5;
-    color: var(--light-slate);
-  }
-
-  a {
-    ${({ theme }) => theme.mixins.inlineLink};
-  }
-
-  code {
-    background-color: var(--lightest-navy);
-    color: var(--lightest-slate);
-    border-radius: var(--border-radius);
-    font-size: var(--fz-sm);
-    padding: 0.2em 0.4em;
-  }
-
-  pre code {
-    background-color: transparent;
-    padding: 0;
-  }
+  /* ... (keep your existing styles) ... */
 `;
 
 const PostTemplate = ({ data, location }) => {
-  const { frontmatter, html } = data.markdownRemark;
+  const post = data.markdownRemark;
+  
+  // Add error handling for missing frontmatter
+  if (!post || !post.frontmatter) {
+    return (
+      <Layout location={location}>
+        <StyledPostContainer>
+          <h1>Post not found</h1>
+          <Link to="/pensieve">Back to all posts</Link>
+        </StyledPostContainer>
+      </Layout>
+    );
+  }
+
+  const { frontmatter, html } = post;
   const { title, date, tags } = frontmatter;
 
   return (
@@ -74,14 +58,16 @@ const PostTemplate = ({ data, location }) => {
                 day: 'numeric',
               })}
             </time>
-            <span>&nbsp;&mdash;&nbsp;</span>
-            {tags &&
-              tags.length > 0 &&
-              tags.map((tag, i) => (
-                <Link key={i} to={`/pensieve/tags/${kebabCase(tag)}/`} className="tag">
-                  #{tag}
-                </Link>
-              ))}
+            {tags?.length > 0 && (
+              <>
+                <span>&nbsp;&mdash;&nbsp;</span>
+                {tags.map((tag, i) => (
+                  <Link key={i} to={`/pensieve/tags/${kebabCase(tag)}/`} className="tag">
+                    #{tag}
+                  </Link>
+                ))}
+              </>
+            )}
           </p>
         </StyledPostHeader>
 
@@ -94,21 +80,26 @@ const PostTemplate = ({ data, location }) => {
 export default PostTemplate;
 
 PostTemplate.propTypes = {
-  data: PropTypes.object,
+  data: PropTypes.shape({
+    markdownRemark: PropTypes.shape({
+      html: PropTypes.string,
+      frontmatter: PropTypes.shape({
+        title: PropTypes.string,
+        date: PropTypes.string,
+        tags: PropTypes.arrayOf(PropTypes.string),
+      }),
+    }),
+  }),
   location: PropTypes.object,
 };
 
 export const pageQuery = graphql`
-  query($path: String!) {
-    markdownRemark(frontmatter: { slug: { eq: $path } }) {
+  query($slug: String!) {
+    markdownRemark(fields: { slug: { eq: $slug } }) {
       html
       frontmatter {
         title
-        description
         date
-        slug
         tags
       }
     }
-  }
-`;
