@@ -1,28 +1,41 @@
-/**
- * Implement Gatsby's Node APIs in this file.
- *
- * See: https://www.gatsbyjs.org/docs/node-apis/
- */
-
 const path = require('path');
 const _ = require('lodash');
+const { createFilePath } = require('gatsby-source-filesystem');
 
+// Create slugs for markdown files
+exports.onCreateNode = ({ node, actions, getNode }) => {
+  const { createNodeField } = actions;
+  
+  if (node.internal.type === 'MarkdownRemark') {
+    const value = createFilePath({ node, getNode });
+    createNodeField({
+      name: 'slug',
+      node,
+      value,
+    });
+  }
+};
+
+// Create pages
 exports.createPages = async ({ actions, graphql, reporter }) => {
   const { createPage } = actions;
-  const postTemplate = path.resolve(`src/templates/post.js`);
+  const postTemplate = path.resolve('src/templates/post.js');
   const tagTemplate = path.resolve('src/templates/tag.js');
 
   const result = await graphql(`
     {
       postsRemark: allMarkdownRemark(
         filter: { fileAbsolutePath: { regex: "/content/posts/" } }
-        sort: { order: DESC, fields: [frontmatter___date] }
+        sort: { frontmatter: { date: DESC } }
         limit: 1000
       ) {
         edges {
           node {
-            frontmatter {
+            fields {
               slug
+            }
+            frontmatter {
+              tags
             }
           }
         }
@@ -46,15 +59,16 @@ exports.createPages = async ({ actions, graphql, reporter }) => {
 
   posts.forEach(({ node }) => {
     createPage({
-      path: node.frontmatter.slug,
+      path: node.fields.slug, // Using the generated slug
       component: postTemplate,
-      context: {},
+      context: {
+        slug: node.fields.slug, // Pass slug to context
+      },
     });
   });
 
-  // Extract tag data from query
+  // Create tag pages
   const tags = result.data.tagsGroup.group;
-  // Make tag pages
   tags.forEach(tag => {
     createPage({
       path: `/pensieve/tags/${_.kebabCase(tag.fieldValue)}/`,
@@ -66,9 +80,9 @@ exports.createPages = async ({ actions, graphql, reporter }) => {
   });
 };
 
-// https://www.gatsbyjs.org/docs/node-apis/#onCreateWebpackConfig
+// Webpack config
 exports.onCreateWebpackConfig = ({ stage, loaders, actions }) => {
-  // https://www.gatsbyjs.org/docs/debugging-html-builds/#fixing-third-party-modules
+  // Fix for SSR with certain libraries
   if (stage === 'build-html' || stage === 'develop-html') {
     actions.setWebpackConfig({
       module: {
@@ -90,6 +104,7 @@ exports.onCreateWebpackConfig = ({ stage, loaders, actions }) => {
     });
   }
 
+  // Path aliases
   actions.setWebpackConfig({
     resolve: {
       alias: {
